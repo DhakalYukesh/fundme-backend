@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Journal } from 'src/journal/entities/journal.entity';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 
 @Entity()
 export class User {
@@ -22,4 +23,7 @@ export class User {
 
   @Column({ nullable: true })
   twoFASecret: string;
+
+  @OneToMany(() => Journal, (journal) => journal.user)
+  journals: Journal[];
 }

@@ -1,10 +1,11 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
-import { RegisterUserPayload } from 'src/utils/types';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hash, compare } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +15,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async registerUser(registerUserPayload: RegisterUserPayload): Promise<User> {
+  async registerUser(registerUserPayload: RegisterDto): Promise<User> {
     const { fullName, email, password } = registerUserPayload;
 
     // Check if email already exists
@@ -29,7 +30,7 @@ export class AuthService {
     }
 
     // Hash password and save user
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hash(password, 10);
     const user = this.userRepository.create({
       fullName,
       email,
@@ -39,9 +40,7 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 
-  async validateUser(
-    validateData: Omit<RegisterUserPayload, 'fullName'>,
-  ): Promise<User | undefined> {
+  async validateUser(validateData: LoginDto): Promise<User | undefined> {
     const { email, password } = validateData;
     const user = await this.userRepository.findOne({ where: { email } });
 
@@ -50,7 +49,7 @@ export class AuthService {
     }
 
     // Compare password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await compare(password, user.password);
 
     if (!isPasswordValid) {
       throw new HttpException('Invalid credentials.', HttpStatus.UNAUTHORIZED);

@@ -1,4 +1,4 @@
-# Financial Tracking System Backend
+# FundMe Backend System
 
 A NestJS-based backend application for managing financial journals, ledgers, and user authentication with 2FA support.
 

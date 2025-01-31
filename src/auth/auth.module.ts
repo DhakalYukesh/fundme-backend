@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from 'src/user/entities/user.entity';
 import { AuthGuard } from './guards/auth.guard';
+import { SpeakeasyService } from './speakeasy.service';
+import { UserService } from 'src/user/user.service';
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { AuthGuard } from './guards/auth.guard';
       signOptions: { expiresIn: '24h' },
     }),
   ],
-  providers: [AuthService, AuthGuard],
+  providers: [AuthService, AuthGuard, SpeakeasyService, UserService],
   controllers: [AuthController],
   exports: [AuthService, AuthGuard, JwtModule],
 })

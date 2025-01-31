@@ -55,11 +55,11 @@ A NestJS-based backend application for managing financial journals, ledgers, and
 
 Create a `.env` file in the root directory and add the following variables:
 ```
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=your_db_user
-DATABASE_PASSWORD=your_db_password
-DATABASE_NAME=fundme
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=your_db_user
+POSTGRES_PASSWORD=your_db_password
+POSTGRES_DB=fundme
 JWT_SECRET=your_jwt_secret
 TOTP_SECRET=your_totp_secret
 ```

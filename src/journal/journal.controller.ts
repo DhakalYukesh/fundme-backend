@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -43,5 +45,26 @@ export class JournalController {
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
     );
+  }
+
+  @Put(':journalId')
+  updateJournalEntry(
+    @GetUser() user: { id: number },
+    @Param('journalId') journalId: number,
+    @Body() updateJournalPayload: JournalDto,
+  ) {
+    return this.journalService.updateJournalEntry(
+      user.id,
+      journalId,
+      updateJournalPayload,
+    );
+  }
+
+  @Delete(':journalId')
+  deleteJournalEntry(
+    @GetUser() user: { id: number },
+    @Param('journalId') journalId: number,
+  ) {
+    return this.journalService.deleteJournalEntry(user.id, journalId);
   }
 }

@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Journal } from './entities/journal.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { JournalDto } from './dto/journal.dto';
 import { User } from 'src/user/entities/user.entity';
 
@@ -10,49 +10,65 @@ export class JournalService {
   constructor(
     @InjectRepository(Journal) private journalRepository: Repository<Journal>,
     @InjectRepository(User) private userRepository: Repository<User>,
+    private dataSource: DataSource,
   ) {}
 
   async createJournal(
     userId: number,
     createJournalPayload: JournalDto,
-  ): Promise<Journal> {
-    // 1. Check if debit and credit are equal
+  ): Promise<Journal | undefined> {
+    // 1. Check if debit and credit are equal, if yes, setup the queryRunner
     if (createJournalPayload.debit !== createJournalPayload.credit) {
       throw new HttpException(
-        'Debit and credit should be equal.',
+        'Debit and credit must be equal.',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    // 2. Fetch the User entity
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new HttpException('User not found.', HttpStatus.NOT_FOUND);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 2. Fetch the user entity
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new HttpException('User not found.', HttpStatus.NOT_FOUND);
+      }
+
+      // 3. Find the last entry
+      const lastEntry = await queryRunner.manager.findOne(Journal, {
+        where: { user: { id: userId } },
+        order: { id: 'DESC' },
+      });
+
+      const totalBalance =
+        (lastEntry?.totalBalance || 0) +
+        createJournalPayload.debit -
+        createJournalPayload.credit;
+
+      // 4. Save the new journal
+      const newJournal = queryRunner.manager.create(Journal, {
+        ...createJournalPayload,
+        user,
+        totalBalance,
+      });
+
+      // 5. Handle Transactions
+      await queryRunner.manager.save(newJournal);
+      await queryRunner.commitTransaction();
+      return newJournal;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error(
+        'Something went wrong while trying to create Journal: ',
+        error,
+      );
+    } finally {
+      await queryRunner.release();
     }
-
-    // 3. Find last entry
-    const lastEntry = await this.journalRepository.findOne({
-      where: { user: { id: userId } },
-      order: { id: 'DESC' },
-    });
-
-    console.log('lastEntry', lastEntry);
-
-    // Get debit and credit values
-    const debit = createJournalPayload.debit;
-    const credit = createJournalPayload.credit;
-
-    // 4. Calculate total balance
-    const totalBalance = (lastEntry?.totalBalance || 0) + debit - credit;
-
-    console.log('totalBalance', totalBalance);
-
-    // 5. Save journal entry
-    return this.journalRepository.save({
-      ...createJournalPayload,
-      user,
-      totalBalance,
-    });
   }
 
   async getJournalEntries(
@@ -84,7 +100,7 @@ export class JournalService {
     return await query.getMany();
   }
 
-  async updateJournal(
+  async updateJournalEntry(
     userId: number,
     journalId: number,
     updateJournalPayload: JournalDto,
@@ -113,7 +129,7 @@ export class JournalService {
     return this.journalRepository.save(updateJournal);
   }
 
-  async deleteJournal(userId: number, journalId: number): Promise<void> {
+  async deleteJournalEntry(userId: number, journalId: number): Promise<void> {
     // 1. Fetch the journal entry
     const journal = await this.journalRepository.findOne({
       where: { id: journalId, user: { id: userId } },

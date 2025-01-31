@@ -1,10 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpException,
-  HttpStatus,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -20,17 +14,6 @@ export class AuthController {
 
   @Post('login')
   async loginUser(@Body() loginDto: LoginDto) {
-    // 1. Validate user
-    const user = await this.authService.validateUser(loginDto);
-
-    if (!user) {
-      throw new HttpException(
-        'Invalid credentials, please try again.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // 2. Generate tokens
-    return this.authService.loginUser(user);
+    return this.authService.loginUser(loginDto);
   }
 }

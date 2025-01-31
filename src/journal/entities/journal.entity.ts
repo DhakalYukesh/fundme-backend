@@ -21,12 +21,12 @@ export class Journal {
   @Column()
   description: string;
 
-  @Column('numeric')
+  @Column('decimal', { precision: 10, scale: 2 })
   debit: number;
 
-  @Column('numeric')
+  @Column('decimal', { precision: 10, scale: 2 })
   credit: number;
 
-  @Column('numeric')
+  @Column('decimal', { precision: 10, scale: 2 })
   totalBalance: number;
 }

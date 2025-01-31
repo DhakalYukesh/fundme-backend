@@ -38,7 +38,10 @@ export class AuthGuard implements CanActivate {
 
     // 2. If token is not found, throw an error
     if (!token) {
-      throw new HttpException('Token not found', HttpStatus.UNAUTHORIZED);
+      throw new HttpException(
+        'Unauthorized access! Please login.',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     try {

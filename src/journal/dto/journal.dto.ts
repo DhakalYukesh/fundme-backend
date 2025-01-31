@@ -23,8 +23,4 @@ export class JournalDto {
   @IsNumber()
   @Min(0)
   credit: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  totalBalance: number;
 }

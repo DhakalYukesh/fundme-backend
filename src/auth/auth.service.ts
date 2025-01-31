@@ -58,18 +58,6 @@ export class AuthService {
     return user;
   }
 
-  loginUser(user: User) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-    };
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-    };
-  }
-
   generateJWT(user: User) {
     const payload = { sub: user.id, fullName: user.fullName, role: user.role };
 
@@ -77,5 +65,20 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
     };
+  }
+
+  async loginUser(loginUserPayload: LoginDto) {
+    // 1. Validate user
+    const user = await this.validateUser(loginUserPayload);
+
+    if (!user) {
+      throw new HttpException(
+        'Invalid credentials, please try again.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // 2. Generate tokens
+    return this.generateJWT(user);
   }
 }

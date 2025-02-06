@@ -6,6 +6,8 @@ import { hash, compare } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UserService } from 'src/user/user.service';
+import { SpeakeasyService } from './speakeasy.service';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +15,8 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
+    private userService: UserService,
+    private speakeasyService: SpeakeasyService,
   ) {}
 
   async registerUser(registerUserPayload: RegisterDto): Promise<User> {
@@ -80,5 +84,65 @@ export class AuthService {
 
     // 2. Generate tokens
     return this.generateJWT(user);
+  }
+
+  async enable2FA(userId: number) {
+    const user = await this.userService.getUserById(userId);
+    if (!this.speakeasyService) {
+      throw new HttpException(
+        '2FA service not available',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    const { secret, otpauthUrl } = this.speakeasyService.generateSecret(
+      user.email,
+    );
+
+    if (typeof secret !== 'string') {
+      throw new HttpException(
+        'Invalid secret generated',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    // Store temporary secret
+    user.twoFASecret = secret;
+    await this.userRepository.save(user);
+
+    return { secret, otpauthUrl };
+  }
+
+  async verify2FA(userId: number, code: string) {
+    const user = await this.userService.getUserById(userId);
+
+    if (!user.twoFASecret) {
+      throw new HttpException('2FA not initiated', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!this.speakeasyService) {
+      throw new HttpException(
+        '2FA service not available',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    // Add logging to debug the values
+    console.log('Verifying 2FA with:', {
+      secret: user.twoFASecret,
+      code: code,
+    });
+
+    const isValid = this.speakeasyService.verifyToken(user.twoFASecret, code);
+
+    console.log('Verification result:', isValid);
+
+    if (!isValid) {
+      throw new HttpException('Invalid 2FA code', HttpStatus.BAD_REQUEST);
+    }
+
+    user.is2FAEnabled = true;
+    await this.userRepository.save(user);
+
+    return { message: '2FA enabled successfully' };
   }
 }
